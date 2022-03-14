@@ -24,8 +24,7 @@ from pytorch3d.io.obj_io import load_obj, save_obj
 from pterotactyl.utility import pretty_render
 import pterotactyl.objects as objects
 
-
-
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 def load_mesh_vision(args, obj):
 	# load obj file
@@ -99,7 +98,7 @@ def adj_fuse_touch(verts, faces, adj, args):
 
 		# define and fill new adjacency matrix with vision and touch charts
 		new_dim = adj.shape[0] + (fingers * number_of_grasps * sheet_adj.shape[0])
-		new_adj = torch.zeros((new_dim, new_dim)).cuda()
+		new_adj = torch.zeros((new_dim, new_dim)).to(device)
 		new_adj[: adj.shape[0], :adj.shape[0]] = adj.clone()
 		for i in range(fingers * number_of_grasps):
 			start = adj.shape[0] + (sheet_adj.shape[0] * i)
@@ -195,8 +194,8 @@ def load_mesh_touch(obj):
 	obj_info = load_obj(obj)
 	verts = obj_info[0]
 	faces = obj_info[1].verts_idx
-	verts = torch.FloatTensor(verts).cuda()
-	faces = torch.LongTensor(faces).cuda()
+	verts = torch.FloatTensor(verts).to(device)
+	faces = torch.LongTensor(faces).to(device)
 	return verts, faces
 
 
@@ -226,7 +225,7 @@ def save_points(file, points):
 
 # converts a voxel object to a point cloud
 def extract_surface(voxel):
-	conv_filter = torch.ones((1, 1, 3, 3, 3)).cuda()
+	conv_filter = torch.ones((1, 1, 3, 3, 3)).to(device)
 	local_occupancy = F.conv3d(voxel.unsqueeze(
 		0).unsqueeze(0), conv_filter, padding=1)
 	local_occupancy = local_occupancy.squeeze(0).squeeze(0)
@@ -235,7 +234,10 @@ def extract_surface(voxel):
 	points = torch.where(surface_positions)
 	points = torch.stack(points)
 	points = points.permute(1, 0)
-	return points.type(torch.cuda.FloatTensor)
+	if device=='cuda:0':
+		return points.type(torch.cuda.FloatTensor)
+	else:
+		return points.type(torch.FloatTensor)
 
 # saves a mesh as an .obj file
 def write_obj(filename, verts, faces):
@@ -250,8 +252,6 @@ def write_obj(filename, verts, faces):
 		f.write('# %d faces\n' % len(faces))
 		for face in faces:
 			f.write('f %d %d %d\n' % tuple(face))
-
-
 
 # makes the sphere of actions
 class get_circle(object):

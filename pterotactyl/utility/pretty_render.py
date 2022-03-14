@@ -5,7 +5,7 @@
 
 import os
 
-os.environ["PYOPENGL_PLATFORM"] = "egl"
+#os.environ["PYOPENGL_PLATFORM"] = "egl"
 
 import numpy as np
 import trimesh
